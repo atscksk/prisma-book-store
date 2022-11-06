@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  user_id Int    @id @default(autoincrement())
+  email   String @db.VarChar(40)
+
+  user_info UserInfo?
+  reviews   Review[]
+  Carts     Cart[]
+  orders    Order[]
+}
+
+model UserInfo {
+  user_info_id Int    @id @default(autoincrement())
+  password     String @db.Text
+  user_id      Int    @unique
+
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model Category {
+  category_id Int @id @default(autoincrement())
+  name String @db.VarChar(10)
+
+  books Book[]
+}
+
+model Book {
+  book_id   Int    @id @default(autoincrement())
+  title     String @db.VarChar(40)
+  publisher String @db.VarChar(20)
+  author    String @db.VarChar(10)
+  price     Int    @default(0)
+  category_id Int?
+
+  category Category? @relation(fields: [category_id], references: [category_id])
+
+  reviews     Review[]
+  Carts       Cart[]
+  order_infos OrderInfo[]
+}
+
+model Review {
+  review_id  Int      @id @default(autoincrement())
+  user_id    Int?
+  book_id    Int
+  created_at DateTime @default(now())
+
+  content String @db.VarChar(20)
+  rating  Int    @default(0)
+
+  user User? @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
+  book Book  @relation(fields: [book_id], references: [book_id], onDelete: Cascade)
+}
+
+model Cart {
+  user_id Int
+  book_id Int
+  amount  Int @default(1)
+
+  user User  @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  book Book? @relation(fields: [book_id], references: [book_id], onDelete: SetNull)
+
+  @@id([user_id, book_id])
+}
+
+model Order {
+  order_id   Int      @id @default(autoincrement())
+  created_at DateTime @default(now())
+  user_id    Int
+  payment_id String   @unique
+
+  user        User        @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  order_infos OrderInfo[]
+
+  @@index([payment_id], type: Hash)
+}
+
+model OrderInfo {
+  order_id Int
+  book_id  Int
+  amount   Int @default(0)
+
+  book  Book  @relation(fields: [book_id], references: [book_id], onDelete: Cascade)
+  order Order @relation(fields: [order_id], references: [order_id], onDelete: Cascade)
+
+  @@id([order_id, book_id])
+}
